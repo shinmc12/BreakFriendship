@@ -30,6 +30,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("ETC")]
     public Text StatusText;
     public PhotonView PV ;
+    public GameObject[] P;
+    public Image[] img;
+    public GameObject timer;
+
 
 
     int Max_Player = 0;
@@ -115,7 +119,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         LobbyPanel.SetActive(true);
         PhotonNetwork.LocalPlayer.NickName = NickNameInput.text;
         WelcomeText.text = PhotonNetwork.LocalPlayer.NickName + "님 환영합니다.";
-        
+        if (Max_Player == 2)
+            RemoveParray(2);
+        else if (Max_Player == 3)
+            RemoveParray(3);
+
     }
 
     //포톤 연결끊기
@@ -126,6 +134,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         LobbyPanel.SetActive(false);
         RoomPanel.SetActive(false);
         NickNameInput.text = " ";
+        
     }
 
     public void CreateRoom()
@@ -137,16 +146,47 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         else
         {
             Debug.Log("방생성");
-            
+
             // 방이름을 RoomInput.text로 방옵션을 최대인원수 2로 성공적으로 수행되면 OnJoinedRoom 콜백함수실행
-            if(Max_Player == 2)
+            if (Max_Player == 2)
+            {
+               
                 PhotonNetwork.CreateRoom(RoomInput.text, new RoomOptions { MaxPlayers = 2 });
+                P[2].SetActive(false);
+                P[3].SetActive(false);
+            }
             else if (Max_Player == 3)
+            {
                 PhotonNetwork.CreateRoom(RoomInput.text, new RoomOptions { MaxPlayers = 3 });
+                P[3].SetActive(false);
+            }
+
             else if (Max_Player == 4)
-                PhotonNetwork.CreateRoom(RoomInput.text, new RoomOptions { MaxPlayers = 4 });   
+                PhotonNetwork.CreateRoom(RoomInput.text, new RoomOptions { MaxPlayers = 4 });
             else
                 PhotonNetwork.CreateRoom(RoomInput.text, new RoomOptions { MaxPlayers = 4 });
+        }
+    }
+
+    public void RemoveParray(int num)
+    {
+        PV.RPC("RemoveParrayRPC", RpcTarget.All, num);
+    }
+
+    [PunRPC]
+    public void RemoveParrayRPC(int num)
+    {
+        
+        if(num == 2)
+        {
+            P[2].SetActive(false);
+            P[3].SetActive(false);
+  
+        }
+        else if(num == 3)
+        {
+            
+
         }
     }
 
@@ -182,12 +222,80 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         PV.RPC("ChatRPC", RpcTarget.All, "<color=yellow>" + otherPlayer.NickName + "님이 퇴장하셨습니다</color>");
     }
 
+    public void ImageSelect(int num)
+    {
+        
+        int[] array = new int[2];
+        array[0] = num;
+        int i = 0;
+        for (i = 0; i < PhotonNetwork.PlayerList.Length; i++)
+        {
+            if (PhotonNetwork.PlayerList[i].NickName == PhotonNetwork.LocalPlayer.NickName)
+            {
+                break;
+            }
+
+
+        }
+        array[1] = i;
+        PV.RPC("ImageSelectRPC", RpcTarget.All,array);
+
+
+    }
+
+    public void Ready()
+    {
+        int count = 0;
+        int i = 0;
+        for (i = 0; i < PhotonNetwork.PlayerList.Length; i++)
+        {
+            if (PhotonNetwork.PlayerList[i].NickName == PhotonNetwork.LocalPlayer.NickName)
+            {
+                break;
+            }
+
+
+        }
+
+        PV.RPC("ReadyRPC", RpcTarget.All,i);
+
+
+    }
+    public void Gotimer()
+    {
+        PV.RPC("GotimerRPC", RpcTarget.All);
+    }
+
+    [PunRPC]
+    public void GotimerRPC()
+    {
+        timer.SetActive(true);
+    }
+
+
     void RoomRenewal()
     {
+        List<string> namelist = new List<string>();
+        
+        
         ListText.text = "";
         for (int i = 0; i < PhotonNetwork.PlayerList.Length; i++)
+        {
             ListText.text += PhotonNetwork.PlayerList[i].NickName + ((i + 1 == PhotonNetwork.PlayerList.Length) ? "" : ", ");
+            namelist.Add(PhotonNetwork.PlayerList[i].NickName);
+        }
+        for(int i = PhotonNetwork.PlayerList.Length; i<4;i++)
+        {
+            namelist.Add("");
+        }
+        for (int i = 0; i < P.Length; i++)
+        {     
+            P[i].transform.GetChild(1).GetComponent<Text>().text = namelist[i];
+        }
+
         RoomInfoText.text = PhotonNetwork.CurrentRoom.Name + " / " + PhotonNetwork.CurrentRoom.PlayerCount + "명 / " + PhotonNetwork.CurrentRoom.MaxPlayers + "최대";
+
+
     }
 
 
@@ -205,7 +313,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         string msg = PhotonNetwork.NickName + " : " + ChatInput.text;
         PV.RPC("ChatRPC", RpcTarget.All, PhotonNetwork.NickName + " : " + ChatInput.text);
         ChatInput.text = "";
-        Debug.Log("send");
+        
     }
 
     [PunRPC] // RPC는 플레이어가 속해있는 방 모든 인원에게 전달한다
@@ -225,5 +333,41 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             ChatText[ChatText.Length - 1].text = msg;
         }
     }
+
+    [PunRPC]
+    public void ImageSelectRPC(int[] num)
+    {
+        Debug.Log("이미지선택");
+
+
+            P[num[1]].transform.GetChild(0).GetComponent<Image>().sprite = img[num[0]].GetComponent<Image>().sprite;
+
+    }
+
+    [PunRPC]
+    public void ReadyRPC(int num)
+    {
+        int count = 0;
+        
+        if (P[num].transform.GetChild(2).GetComponent<Text>().text == "<color=#ff0000>" + "Ready" + "</color>")
+        {
+            P[num].transform.GetChild(2).GetComponent<Text>().text = "<color=#000000>" + "Ready" + "</color>";
+        }
+        else
+        {
+            P[num].transform.GetChild(2).GetComponent<Text>().text = "<color=#ff0000>" + "Ready" + "</color>";
+        }
+
+        for (int i = 0; i< PhotonNetwork.PlayerList.Length; i++)
+        {
+            if (P[i].transform.GetChild(2).GetComponent<Text>().text == "<color=#ff0000>" + "Ready" + "</color>")
+                count = count + 1;
+        }
+
+        if (count == PhotonNetwork.PlayerList.Length && PhotonNetwork.PlayerList.Length == Max_Player)
+            Gotimer();
+
+    }
+    
 
 }
