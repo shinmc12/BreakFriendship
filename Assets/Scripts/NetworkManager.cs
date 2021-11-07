@@ -34,8 +34,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public Image[] img;
     public GameObject timer;
 
-
-
     int Max_Player = 0;
 
     List<RoomInfo> myList = new List<RoomInfo>();
@@ -115,14 +113,21 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnJoinedLobby()
     {
         Debug.Log("로비참가");
-        
-        LobbyPanel.SetActive(true);
-        PhotonNetwork.LocalPlayer.NickName = NickNameInput.text;
-        WelcomeText.text = PhotonNetwork.LocalPlayer.NickName + "님 환영합니다.";
-        if (Max_Player == 2)
-            RemoveParray(2);
-        else if (Max_Player == 3)
-            RemoveParray(3);
+        if (NickNameInput.text != "")
+        {
+            LobbyPanel.SetActive(true);
+            PhotonNetwork.LocalPlayer.NickName = NickNameInput.text;
+            WelcomeText.text = PhotonNetwork.LocalPlayer.NickName + "님 환영합니다.";
+            if (Max_Player == 2)
+                RemoveParray(2);
+            else if (Max_Player == 3)
+                RemoveParray(3);
+        }
+        else
+        {
+            NickNameInput.GetComponent<Animator>().SetTrigger("on");
+            PhotonNetwork.Disconnect();
+        }
 
     }
 
@@ -131,9 +136,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public override void OnDisconnected(DisconnectCause cause)
     {
-        LobbyPanel.SetActive(false);
-        RoomPanel.SetActive(false);
-        NickNameInput.text = " ";
+        if (NickNameInput.text != "")
+        {
+            LobbyPanel.SetActive(false);
+            RoomPanel.SetActive(false);
+            NickNameInput.text = " ";
+        }
         
     }
 
